@@ -44,14 +44,14 @@ def collect_questions_with_answers():
 def get_the_score(update: Update, context: CallbackContext, r):
     quiz = update.effective_chat.id
     guessed = f"Угадано {quiz}"
-    unguessed = f"Неугадано {quiz}"
+    unguessed = f"Не угадано {quiz}"
     guessed_score = r.get(guessed)
     unguessed_score = r.get(unguessed)
     if not guessed_score:
         guessed_score = 0
     if not unguessed_score:
         unguessed_score = 0
-    message = f"Угадано: {guessed_score}   Неугадано: {unguessed_score}"
+    message = f"Угадано: {guessed_score}   Не угадано: {unguessed_score}"
     show_the_keyboard(update, context, message)
 
 
@@ -59,7 +59,7 @@ def take_into_account(update: Update, context: CallbackContext, r, result):
     quiz = update.effective_chat.id
     question = r.get(quiz)
     guessed = f"Угадано {quiz}"
-    unguessed = f"Неугадано {quiz}"
+    unguessed = f"Не угадано {quiz}"
     guessed_score = r.get(guessed)
     unguessed_score = r.get(unguessed)
     if result:
