@@ -1,10 +1,13 @@
 import os
+import redis
+import random
 import telegram
 import telegram.ext
 
 from pathlib import Path
 from dotenv import load_dotenv
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import CallbackContext
+from telegram import Update, ReplyKeyboardMarkup
 
 
 def is_system_file(filename):
@@ -21,37 +24,162 @@ def collect_questions_with_answers():
                 filepath = os.path.join(root, filename)
                 filepaths.append(filepath)
     questions_with_answers = {}
-    for filepath in filepaths:
-        with open(filepath, encoding="KOI8-R") as file:
-            text = file.read()
-        paragraphs = [text_part.strip() for text_part in text.split("\n\n")]
-        question = None
-        while paragraphs:
-            paragraph = paragraphs.pop(0)
-            if paragraph.startswith("Вопрос"):
-                question = paragraph.split(":\n")[-1]
-            elif paragraph.startswith("Ответ"):
-                questions_with_answers[question] = paragraph.split(":\n")[-1]
+    random_filepath = random.choice(filepaths)
+    with open(random_filepath, encoding="KOI8-R") as file:
+        text = file.read()
+    paragraphs = [text_part.strip() for text_part in text.split("\n\n")]
+    question = None
+    while paragraphs:
+        paragraph = paragraphs.pop(0)
+        if paragraph.startswith("Вопрос"):
+            question = paragraph.split(":\n")[-1]
+        elif paragraph.startswith("Ответ"):
+            questions_with_answers[question] = paragraph.split(":\n")[-1]
+    return questions_with_answers
 
 
-def start(update: telegram.Update, context: telegram.ext.CallbackContext):
+def get_the_score(update: Update, context: CallbackContext, r):
+    quiz = update.effective_chat.id
+    guessed = f"Угадано {quiz}"
+    unguessed = f"Неугадано {quiz}"
+    guessed_score = r.get(guessed)
+    unguessed_score = r.get(unguessed)
+    if not guessed_score:
+        guessed_score = 0
+    if not unguessed_score:
+        unguessed_score = 0
+    message = f"Угадано: {guessed_score}   Неугадано: {unguessed_score}"
+    show_the_keyboard(update, context, message)
+
+
+def take_into_account(update: Update, context: CallbackContext, r, result):
+    quiz = update.effective_chat.id
+    question = r.get(quiz)
+    guessed = f"Угадано {quiz}"
+    unguessed = f"Неугадано {quiz}"
+    guessed_score = r.get(guessed)
+    unguessed_score = r.get(unguessed)
+    if result:
+        if guessed_score:
+            r.set(guessed, str(int(guessed_score) + 1))
+        else:
+            r.set(guessed, "1")
+    else:
+        if unguessed_score:
+            r.set(unguessed, str(int(unguessed_score) + 1))
+        else:
+            r.set(unguessed, "1")
+    r.delete(question)
+    r.delete(quiz)
+
+
+def give_congratulations(update: Update, context: CallbackContext, r):
+    take_into_account(update, context, r, 1)
+    message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
+    show_the_keyboard(update, context, message)
+
+
+def express_regret(update: Update, context: CallbackContext, r):
+    take_into_account(update, context, r, 0)
+    message = "Неправильно… Попробуешь ещё раз?"
+    show_the_keyboard(update, context, message)
+
+
+def give_up(update: Update, context: CallbackContext, r):
+    quiz = update.effective_chat.id
+    question = r.get(quiz)
+    if question:
+        answer = r.get(question)
+        message = f"Правильный ответ: {answer}"
+        take_into_account(update, context, r, 0)
+    else:
+        message = "Попробуешь ещё раз?"
+    show_the_keyboard(update, context, message)
+
+
+def ask_next_question(update: Update, context: CallbackContext, r):
+    if r.get(update.effective_chat.id):
+        take_into_account(update, context, r, 0)
+        r.delete(update.effective_chat.id)
+    questions_with_answers = collect_questions_with_answers()
+    next_question = random.choice(list(questions_with_answers.keys()))
+    r.set(next_question, questions_with_answers[next_question])
+    r.set(update.effective_chat.id, next_question)
+    message = next_question
+    show_the_keyboard(update, context, message)
+
+
+def show_the_keyboard(update: Update, context: CallbackContext, message):
+    keyboard = [
+        [
+            telegram.KeyboardButton("Новый вопрос"),
+            telegram.KeyboardButton("Сдаюсь")
+        ],
+        [telegram.KeyboardButton("Мой счёт")],
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text='Здравствуйте!',
+        text=message,
+        reply_markup=reply_markup,
     )
 
 
-def echo(update, context):
-    update.message.reply_text(update.message.text)
+def launch_next_step(update: Update, context: CallbackContext, r):
+    last_input = update.message.text
+    triggers = {
+        "Новый вопрос": {
+            "next_func": ask_next_question,
+        },
+        "Сдаюсь": {
+            "next_func": give_up,
+        },
+        "Мой счёт": {
+            "next_func": get_the_score,
+        },
+        "Верный ответ": {
+            "next_func": give_congratulations,
+        },
+        "Неверный ответ": {
+            "next_func": express_regret,
+        },
+    }
+    asked_question = r.get(update.effective_chat.id)
+    if asked_question:
+        if last_input in r.get(asked_question):
+            last_input = "Верный ответ"
+        elif last_input not in triggers.keys():
+            last_input = "Неверный ответ"
+    if triggers.get(last_input):
+        triggers[last_input]["next_func"](update, context, r)
+
+
+def start(update: Update, context: CallbackContext):
+    message = "Привет, я бот для викторин!"
+    show_the_keyboard(update, context, message)
 
 
 def main():
     load_dotenv()
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    updater = Updater(tg_token)
+    redis_pub_endpoint = os.getenv("REDIS_PUBLIC_ENDPOINT")
+    redis_port = int(os.getenv("REDIS_PORT"))
+    redis_password = os.getenv("REDIS_PASSWORD")
+    r = redis.Redis(
+        host=redis_pub_endpoint,
+        port=redis_port,
+        password=redis_password,
+        decode_responses=True,
+    )
+    updater = telegram.ext.Updater(tg_token)
     dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(MessageHandler(Filters.text, echo))
+    dispatcher.add_handler(telegram.ext.CommandHandler('start', start))
+    dispatcher.add_handler(
+        telegram.ext.MessageHandler(
+            telegram.ext.Filters.text,
+            lambda update, context: launch_next_step(update, context, r)
+        )
+    )
     updater.start_polling()
     updater.idle()
 
