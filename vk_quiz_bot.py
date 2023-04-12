@@ -7,6 +7,7 @@ import vk_api as vk
 
 from pathlib import Path
 from dotenv import load_dotenv
+from contextlib import suppress
 
 from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard
@@ -174,11 +175,12 @@ def main():
         format="%(process)d %(levelname)s %(message)s",
     )
 
-    telegram_notify_token = os.environ["TELEGRAM_NOTIFY_TOKEN"]
-    chat_id = os.environ["TELEGRAM_NOTIFY_CHAT_ID"]
-    notify_bot = telegram.Bot(token=telegram_notify_token)
-    logger.setLevel(logging.INFO)
-    logger.addHandler(TelegramLogsHandler(notify_bot, chat_id))
+    with suppress(KeyError):
+        telegram_notify_token = os.environ["TELEGRAM_NOTIFY_TOKEN"]
+        chat_id = os.environ["TELEGRAM_NOTIFY_CHAT_ID"]
+        notify_bot = telegram.Bot(token=telegram_notify_token)
+        logger.setLevel(logging.INFO)
+        logger.addHandler(TelegramLogsHandler(notify_bot, chat_id))
 
     redis_pub_endpoint = os.getenv("REDIS_PUBLIC_ENDPOINT")
     redis_port = int(os.getenv("REDIS_PORT"))
