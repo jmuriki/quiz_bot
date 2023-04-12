@@ -1,6 +1,7 @@
 import os
 import redis
 import random
+import logging
 import telegram
 import telegram.ext
 
@@ -8,7 +9,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from telegram.ext import CallbackContext
 from telegram import Update, ReplyKeyboardMarkup
+from telegram_logs_handler import TelegramLogsHandler
 
+logger = logging.getLogger(__name__)
 
 def is_system_file(filename):
     system_files_extentions = [".DS_Store"]
@@ -161,16 +164,32 @@ def start(update: Update, context: CallbackContext):
 
 def main():
     load_dotenv()
-    tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(process)d - %(levelname)s - %(message)s",
+    )
+
+    telegram_notify_token = os.environ["TELEGRAM_NOTIFY_TOKEN"]
+    chat_id = os.environ["TELEGRAM_NOTIFY_CHAT_ID"]
+    notify_bot = telegram.Bot(token=telegram_notify_token)
+    logger.setLevel(logging.INFO)
+    logger.addHandler(TelegramLogsHandler(notify_bot, chat_id))
+
     redis_pub_endpoint = os.getenv("REDIS_PUBLIC_ENDPOINT")
     redis_port = int(os.getenv("REDIS_PORT"))
     redis_password = os.getenv("REDIS_PASSWORD")
-    r = redis.Redis(
-        host=redis_pub_endpoint,
-        port=redis_port,
-        password=redis_password,
-        decode_responses=True,
-    )
+    try:
+        r = redis.Redis(
+            host=redis_pub_endpoint,
+            port=redis_port,
+            password=redis_password,
+            decode_responses=True,
+        )
+    except Exception as error:
+        logger.exception(error)
+
+    tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
     updater = telegram.ext.Updater(tg_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(telegram.ext.CommandHandler('start', start))
