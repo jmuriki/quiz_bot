@@ -24,7 +24,7 @@ def is_system_file(filename):
 
 
 def collect_questions_with_answers():
-    quiz_questions_path = Path("../quiz-questions").resolve()
+    quiz_questions_path = Path("./quiz-questions").resolve()
     filepaths = []
     for root, _, filenames in os.walk(quiz_questions_path):
         for filename in filenames:
