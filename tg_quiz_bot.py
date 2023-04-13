@@ -144,9 +144,9 @@ def main():
         format="%(process)d - %(levelname)s - %(message)s",
     )
 
-    with suppress(KeyError):
-        telegram_notify_token = os.environ["TELEGRAM_NOTIFY_TOKEN"]
-        chat_id = os.environ["TELEGRAM_NOTIFY_CHAT_ID"]
+    telegram_notify_token = os.getenv("TELEGRAM_NOTIFY_TOKEN")
+    chat_id = os.getenv("TELEGRAM_NOTIFY_CHAT_ID")
+    if telegram_notify_token and chat_id:
         notify_bot = telegram.Bot(token=telegram_notify_token)
         logger.setLevel(logging.INFO)
         logger.addHandler(TelegramLogsHandler(notify_bot, chat_id))
