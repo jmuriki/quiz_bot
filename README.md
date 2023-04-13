@@ -44,13 +44,14 @@ pip install -r requirements.txt
 
 Определите переменные окружения:
 - `TELEGRAM_BOT_TOKEN` - токен вашего telegram бота
-- `TELEGRAM_NOTIFY_TOKEN` - токен вашего вспомогательного бота для логов (опционально)
-- `TELEGRAM_NOTIFY_CHAT_ID` - id вашего telegram чата для логов (опционально)
-- `PATH_TO_QUIZ_QUESTIONS` - путь к папке с вопросами и ответами (опционально)
 - `VK_API_TOKEN` - токен вашего сообщества vk
 - `REDIS_PASSWORD` - пароль аккаунта [Redis](https://redis.com) (бесплатно)
 - `REDIS_PUBLIC_ENDPOINT` - public endpoint вашей БД [Redis](https://redis.com)
 - `REDIS_PORT` - порт вашей БД [Redis](https://redis.com)
+
+- `TELEGRAM_NOTIFY_TOKEN` - токен вашего вспомогательного бота для логов (опционально)
+- `TELEGRAM_NOTIFY_CHAT_ID` - id вашего telegram чата для логов (опционально)
+- `PATH_TO_QUIZ_QUESTIONS` - путь к папке с вопросами и ответами (опционально)
 
 
 Создайте файл `.env` в каталоге `quiz_bot/` и положите туда такой код, заполнив значения переменных:
@@ -87,9 +88,9 @@ python vk_quiz_bot.py
 ```sh
 python tg_quiz_bot.py
 ```
-### telegram_logs_handler.py
+### telegram_logs_handler.py, result_saver.py, questions_with_answers_miner
 
-Это вспомогательный файл, содержащий класс telegram для обработки логов/исключений.
+Это вспомогательные модули для обработки логов/исключений, учёта результатов и подборки вопросов/ответов.
 
 ## Цели проекта
 
