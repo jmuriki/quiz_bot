@@ -10,6 +10,7 @@ from telegram.ext import CallbackContext
 from telegram import Update, ReplyKeyboardMarkup
 from telegram_logs_handler import TelegramLogsHandler
 
+from result_saver import take_result_into_account
 from questions_with_answers_miner import get_question_with_answer
 
 
@@ -30,35 +31,14 @@ def get_score(update: Update, context: CallbackContext, r):
     show_keyboard(update, context, message)
 
 
-def take_result_into_account(update: Update, context: CallbackContext, r, result):
-    player_id = update.effective_chat.id
-    question = r.get(player_id)
-    guessed = f"Угадано {player_id}"
-    unguessed = f"Не угадано {player_id}"
-    guessed_score = r.get(guessed)
-    unguessed_score = r.get(unguessed)
-    if result:
-        if guessed_score:
-            r.set(guessed, str(int(guessed_score) + 1))
-        else:
-            r.set(guessed, "1")
-    else:
-        if unguessed_score:
-            r.set(unguessed, str(int(unguessed_score) + 1))
-        else:
-            r.set(unguessed, "1")
-    r.delete(question)
-    r.delete(player_id)
-
-
 def give_congratulations(update: Update, context: CallbackContext, r):
-    take_result_into_account(update, context, r, 1)
+    take_result_into_account(update.effective_chat.id, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(update, context, message)
 
 
 def express_regret(update: Update, context: CallbackContext, r):
-    take_result_into_account(update, context, r, 0)
+    take_result_into_account(update.effective_chat.id, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(update, context, message)
 
@@ -69,7 +49,7 @@ def give_up(update: Update, context: CallbackContext, r):
     if question:
         answer = r.get(question)
         message = f"Правильный ответ: {answer}"
-        take_result_into_account(update, context, r, 0)
+        take_result_into_account(player_id, r, 0)
     else:
         message = "Попробуешь ещё раз?"
     show_keyboard(update, context, message)
@@ -77,7 +57,7 @@ def give_up(update: Update, context: CallbackContext, r):
 
 def ask_next_question(update: Update, context: CallbackContext, r):
     if r.get(update.effective_chat.id):
-        take_result_into_account(update, context, r, 0)
+        take_result_into_account(update.effective_chat.id, r, 0)
         r.delete(update.effective_chat.id)
     question, answer = get_question_with_answer()
     r.set(question, answer)
