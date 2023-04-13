@@ -19,7 +19,7 @@ from questions_with_answers_miner import get_question_with_answer
 logger = logging.getLogger(__name__)
 
 
-def get_the_score(event, vk_api, r):
+def get_score(event, vk_api, r):
     quiz = event.user_id
     guessed = f"Угадано {quiz}"
     unguessed = f"Не угадано {quiz}"
@@ -30,7 +30,7 @@ def get_the_score(event, vk_api, r):
     if not unguessed_score:
         unguessed_score = 0
     message = f"Угадано: {guessed_score}   Не угадано: {unguessed_score}"
-    show_the_keyboard(event, vk_api, message)
+    show_keyboard(event, vk_api, message)
 
 
 def take_into_account(event, vk_api, r, result):
@@ -57,13 +57,13 @@ def take_into_account(event, vk_api, r, result):
 def give_congratulations(event, vk_api, r):
     take_into_account(event, vk_api, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
-    show_the_keyboard(event, vk_api, message)
+    show_keyboard(event, vk_api, message)
 
 
 def express_regret(event, vk_api, r):
     take_into_account(event, vk_api, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
-    show_the_keyboard(event, vk_api, message)
+    show_keyboard(event, vk_api, message)
 
 
 def give_up(event, vk_api, r):
@@ -75,7 +75,7 @@ def give_up(event, vk_api, r):
         take_into_account(event, vk_api, r, 0)
     else:
         message = "Попробуешь ещё раз?"
-    show_the_keyboard(event, vk_api, message)
+    show_keyboard(event, vk_api, message)
 
 
 def ask_next_question(event, vk_api, r):
@@ -86,10 +86,10 @@ def ask_next_question(event, vk_api, r):
     r.set(question, answer)
     r.set(event.user_id, question)
     message = question
-    show_the_keyboard(event, vk_api, message)
+    show_keyboard(event, vk_api, message)
 
 
-def show_the_keyboard(event, vk_api, message):
+def show_keyboard(event, vk_api, message):
     keyboard = VkKeyboard(one_time=True)
 
     keyboard.add_button('Новый вопрос')
@@ -116,7 +116,7 @@ def launch_next_step(event, vk_api, r):
             "next_func": give_up,
         },
         "Мой счёт": {
-            "next_func": get_the_score,
+            "next_func": get_score,
         },
         "Верный ответ": {
             "next_func": give_congratulations,
@@ -135,7 +135,7 @@ def launch_next_step(event, vk_api, r):
         triggers[last_input]["next_func"](event, vk_api, r)
     else:
         message = "Привет, я бот для викторин!"
-        show_the_keyboard(event, vk_api, message)
+        show_keyboard(event, vk_api, message)
 
 
 def main():

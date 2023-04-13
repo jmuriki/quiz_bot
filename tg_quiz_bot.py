@@ -16,7 +16,7 @@ from questions_with_answers_miner import get_question_with_answer
 logger = logging.getLogger(__name__)
 
 
-def get_the_score(update: Update, context: CallbackContext, r):
+def get_score(update: Update, context: CallbackContext, r):
     quiz = update.effective_chat.id
     guessed = f"Угадано {quiz}"
     unguessed = f"Не угадано {quiz}"
@@ -27,7 +27,7 @@ def get_the_score(update: Update, context: CallbackContext, r):
     if not unguessed_score:
         unguessed_score = 0
     message = f"Угадано: {guessed_score}   Не угадано: {unguessed_score}"
-    show_the_keyboard(update, context, message)
+    show_keyboard(update, context, message)
 
 
 def take_into_account(update: Update, context: CallbackContext, r, result):
@@ -54,13 +54,13 @@ def take_into_account(update: Update, context: CallbackContext, r, result):
 def give_congratulations(update: Update, context: CallbackContext, r):
     take_into_account(update, context, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
-    show_the_keyboard(update, context, message)
+    show_keyboard(update, context, message)
 
 
 def express_regret(update: Update, context: CallbackContext, r):
     take_into_account(update, context, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
-    show_the_keyboard(update, context, message)
+    show_keyboard(update, context, message)
 
 
 def give_up(update: Update, context: CallbackContext, r):
@@ -72,7 +72,7 @@ def give_up(update: Update, context: CallbackContext, r):
         take_into_account(update, context, r, 0)
     else:
         message = "Попробуешь ещё раз?"
-    show_the_keyboard(update, context, message)
+    show_keyboard(update, context, message)
 
 
 def ask_next_question(update: Update, context: CallbackContext, r):
@@ -83,10 +83,10 @@ def ask_next_question(update: Update, context: CallbackContext, r):
     r.set(question, answer)
     r.set(update.effective_chat.id, question)
     message = question
-    show_the_keyboard(update, context, message)
+    show_keyboard(update, context, message)
 
 
-def show_the_keyboard(update: Update, context: CallbackContext, message):
+def show_keyboard(update: Update, context: CallbackContext, message):
     keyboard = [
         [
             telegram.KeyboardButton("Новый вопрос"),
@@ -112,7 +112,7 @@ def launch_next_step(update: Update, context: CallbackContext, r):
             "next_func": give_up,
         },
         "Мой счёт": {
-            "next_func": get_the_score,
+            "next_func": get_score,
         },
         "Верный ответ": {
             "next_func": give_congratulations,
@@ -133,7 +133,7 @@ def launch_next_step(update: Update, context: CallbackContext, r):
 
 def start(update: Update, context: CallbackContext):
     message = "Привет, я бот для викторин!"
-    show_the_keyboard(update, context, message)
+    show_keyboard(update, context, message)
 
 
 def main():
