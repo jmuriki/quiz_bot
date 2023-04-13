@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_score(update: Update, context: CallbackContext, r):
-    quiz = update.effective_chat.id
-    guessed = f"Угадано {quiz}"
-    unguessed = f"Не угадано {quiz}"
+    player_id = update.effective_chat.id
+    guessed = f"Угадано {player_id}"
+    unguessed = f"Не угадано {player_id}"
     guessed_score = r.get(guessed)
     unguessed_score = r.get(unguessed)
     if not guessed_score:
@@ -30,11 +30,11 @@ def get_score(update: Update, context: CallbackContext, r):
     show_keyboard(update, context, message)
 
 
-def take_into_account(update: Update, context: CallbackContext, r, result):
-    quiz = update.effective_chat.id
-    question = r.get(quiz)
-    guessed = f"Угадано {quiz}"
-    unguessed = f"Не угадано {quiz}"
+def take_result_into_account(update: Update, context: CallbackContext, r, result):
+    player_id = update.effective_chat.id
+    question = r.get(player_id)
+    guessed = f"Угадано {player_id}"
+    unguessed = f"Не угадано {player_id}"
     guessed_score = r.get(guessed)
     unguessed_score = r.get(unguessed)
     if result:
@@ -48,28 +48,28 @@ def take_into_account(update: Update, context: CallbackContext, r, result):
         else:
             r.set(unguessed, "1")
     r.delete(question)
-    r.delete(quiz)
+    r.delete(player_id)
 
 
 def give_congratulations(update: Update, context: CallbackContext, r):
-    take_into_account(update, context, r, 1)
+    take_result_into_account(update, context, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(update, context, message)
 
 
 def express_regret(update: Update, context: CallbackContext, r):
-    take_into_account(update, context, r, 0)
+    take_result_into_account(update, context, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(update, context, message)
 
 
 def give_up(update: Update, context: CallbackContext, r):
-    quiz = update.effective_chat.id
-    question = r.get(quiz)
+    player_id = update.effective_chat.id
+    question = r.get(player_id)
     if question:
         answer = r.get(question)
         message = f"Правильный ответ: {answer}"
-        take_into_account(update, context, r, 0)
+        take_result_into_account(update, context, r, 0)
     else:
         message = "Попробуешь ещё раз?"
     show_keyboard(update, context, message)
@@ -77,7 +77,7 @@ def give_up(update: Update, context: CallbackContext, r):
 
 def ask_next_question(update: Update, context: CallbackContext, r):
     if r.get(update.effective_chat.id):
-        take_into_account(update, context, r, 0)
+        take_result_into_account(update, context, r, 0)
         r.delete(update.effective_chat.id)
     question, answer = get_question_with_answer()
     r.set(question, answer)
@@ -105,21 +105,11 @@ def show_keyboard(update: Update, context: CallbackContext, message):
 def launch_next_step(update: Update, context: CallbackContext, r):
     last_input = update.message.text
     triggers = {
-        "Новый вопрос": {
-            "next_func": ask_next_question,
-        },
-        "Сдаюсь": {
-            "next_func": give_up,
-        },
-        "Мой счёт": {
-            "next_func": get_score,
-        },
-        "Верный ответ": {
-            "next_func": give_congratulations,
-        },
-        "Неверный ответ": {
-            "next_func": express_regret,
-        },
+        "Новый вопрос": ask_next_question,
+        "Сдаюсь": give_up,
+        "Мой счёт": get_score,
+        "Верный ответ": give_congratulations,
+        "Неверный ответ": express_regret,
     }
     asked_question = r.get(update.effective_chat.id)
     if asked_question:
@@ -127,8 +117,11 @@ def launch_next_step(update: Update, context: CallbackContext, r):
             last_input = "Верный ответ"
         elif last_input not in triggers.keys():
             last_input = "Неверный ответ"
-    if triggers.get(last_input):
-        triggers[last_input]["next_func"](update, context, r)
+    trigger = triggers.get(last_input)
+    if trigger:
+        trigger(update, context, r)
+    else:
+        start(update, context)
 
 
 def start(update: Update, context: CallbackContext):

@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_score(event, vk_api, r):
-    quiz = event.user_id
-    guessed = f"Угадано {quiz}"
-    unguessed = f"Не угадано {quiz}"
+    player_id = event.user_id
+    guessed = f"Угадано {player_id}"
+    unguessed = f"Не угадано {player_id}"
     guessed_score = r.get(guessed)
     unguessed_score = r.get(unguessed)
     if not guessed_score:
@@ -33,11 +33,11 @@ def get_score(event, vk_api, r):
     show_keyboard(event, vk_api, message)
 
 
-def take_into_account(event, vk_api, r, result):
-    quiz = event.user_id
-    question = r.get(quiz)
-    guessed = f"Угадано {quiz}"
-    unguessed = f"Не угадано {quiz}"
+def take_result_into_account(event, vk_api, r, result):
+    player_id = event.user_id
+    question = r.get(player_id)
+    guessed = f"Угадано {player_id}"
+    unguessed = f"Не угадано {player_id}"
     guessed_score = r.get(guessed)
     unguessed_score = r.get(unguessed)
     if result:
@@ -51,28 +51,28 @@ def take_into_account(event, vk_api, r, result):
         else:
             r.set(unguessed, "1")
     r.delete(question)
-    r.delete(quiz)
+    r.delete(player_id)
 
 
 def give_congratulations(event, vk_api, r):
-    take_into_account(event, vk_api, r, 1)
+    take_result_into_account(event, vk_api, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(event, vk_api, message)
 
 
 def express_regret(event, vk_api, r):
-    take_into_account(event, vk_api, r, 0)
+    take_result_into_account(event, vk_api, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(event, vk_api, message)
 
 
 def give_up(event, vk_api, r):
-    quiz = event.user_id
-    question = r.get(quiz)
+    player_id = event.user_id
+    question = r.get(player_id)
     if question:
         answer = r.get(question)
         message = f"Правильный ответ: {answer}"
-        take_into_account(event, vk_api, r, 0)
+        take_result_into_account(event, vk_api, r, 0)
     else:
         message = "Попробуешь ещё раз?"
     show_keyboard(event, vk_api, message)
@@ -80,7 +80,7 @@ def give_up(event, vk_api, r):
 
 def ask_next_question(event, vk_api, r):
     if r.get(event.user_id):
-        take_into_account(event, vk_api, r, 0)
+        take_result_into_account(event, vk_api, r, 0)
         r.delete(event.user_id)
     question, answer = get_question_with_answer()
     r.set(question, answer)
@@ -109,21 +109,11 @@ def show_keyboard(event, vk_api, message):
 def launch_next_step(event, vk_api, r):
     last_input = event.text
     triggers = {
-        "Новый вопрос": {
-            "next_func": ask_next_question,
-        },
-        "Сдаюсь": {
-            "next_func": give_up,
-        },
-        "Мой счёт": {
-            "next_func": get_score,
-        },
-        "Верный ответ": {
-            "next_func": give_congratulations,
-        },
-        "Неверный ответ": {
-            "next_func": express_regret,
-        },
+        "Новый вопрос": ask_next_question,
+        "Сдаюсь": give_up,
+        "Мой счёт": get_score,
+        "Верный ответ": give_congratulations,
+        "Неверный ответ": express_regret,
     }
     asked_question = r.get(event.user_id)
     if asked_question:
@@ -131,11 +121,16 @@ def launch_next_step(event, vk_api, r):
             last_input = "Верный ответ"
         elif last_input not in triggers.keys():
             last_input = "Неверный ответ"
-    if triggers.get(last_input):
-        triggers[last_input]["next_func"](event, vk_api, r)
+    trigger = triggers.get(last_input)
+    if trigger:
+        trigger(event, vk_api, r)
     else:
-        message = "Привет, я бот для викторин!"
-        show_keyboard(event, vk_api, message)
+        start(event, vk_api)
+
+
+def start(event, vk_api):
+    message = "Привет, я бот для викторин!"
+    show_keyboard(event, vk_api, message)
 
 
 def main():
