@@ -46,6 +46,7 @@ pip install -r requirements.txt
 - `TELEGRAM_BOT_TOKEN` - токен вашего telegram бота
 - `TELEGRAM_NOTIFY_TOKEN` - токен вашего вспомогательного бота для логов (опционально)
 - `TELEGRAM_NOTIFY_CHAT_ID` - id вашего telegram чата для логов (опционально)
+- `PATH_TO_QUIZ_QUESTIONS` - путь к папке с вопросами и ответами (опционально)
 - `VK_API_TOKEN` - токен вашего сообщества vk
 - `REDIS_PASSWORD` - пароль аккаунта [Redis](https://redis.com) (бесплатно)
 - `REDIS_PUBLIC_ENDPOINT` - public endpoint вашей БД [Redis](https://redis.com)
@@ -61,13 +62,14 @@ REDIS_PUBLIC_ENDPOINT=
 REDIS_PORT=
 REDIS_PASSWORD=
 
+PATH_TO_QUIZ_QUESTIONS=
 TELEGRAM_NOTIFY_TOKEN=
 TELEGRAM_NOTIFY_CHAT_ID=
 
 ```
 ### База вопросов и ответов
 
-Скачайте [архив](https://dvmn.org/media/modules_dist/quiz-questions.zip) с вопросами и распакуйте его в предварительно созданную папку `quiz_bot/quiz-question/`.
+Скачайте [архив](https://dvmn.org/media/modules_dist/quiz-questions.zip) с вопросами и распакуйте его в предварительно созданную папку `quiz_bot/quiz-question/` или же разместите в другом месте, указав путь в переменной `PATH_TO_QUIZ_QUESTIONS`.
 
 ## Запуск
 

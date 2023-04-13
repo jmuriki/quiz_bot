@@ -12,7 +12,7 @@ def is_system_file(filename):
 
 def get_question_with_answer():
     load_dotenv()
-    path_to_quiz_questions = os.getenv("PATH_TO_QUIZ_QUESTIONS")
+    path_to_quiz_questions = os.getenv("PATH_TO_QUIZ_QUESTIONS", "./quiz-questions")
     quiz_questions_path = Path(path_to_quiz_questions).resolve()
     filepaths = []
     for root, _, filenames in os.walk(quiz_questions_path):
