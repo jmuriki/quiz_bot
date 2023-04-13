@@ -1,47 +1,19 @@
 import os
 import redis
-import random
 import logging
 import telegram
 import telegram.ext
 
-from pathlib import Path
 from dotenv import load_dotenv
 from contextlib import suppress
 from telegram.ext import CallbackContext
 from telegram import Update, ReplyKeyboardMarkup
 from telegram_logs_handler import TelegramLogsHandler
 
+from questions_with_answers_miner import get_question_with_answer
+
 
 logger = logging.getLogger(__name__)
-
-
-def is_system_file(filename):
-    system_files_extentions = [".DS_Store"]
-    return any(extention in filename for extention in system_files_extentions)
-
-
-def collect_questions_with_answers():
-    quiz_questions_path = Path("./quiz-questions").resolve()
-    filepaths = []
-    for root, _, filenames in os.walk(quiz_questions_path):
-        for filename in filenames:
-            if not is_system_file(filename):
-                filepath = os.path.join(root, filename)
-                filepaths.append(filepath)
-    questions_with_answers = {}
-    random_filepath = random.choice(filepaths)
-    with open(random_filepath, encoding="KOI8-R") as file:
-        text = file.read()
-    paragraphs = [text_part.strip() for text_part in text.split("\n\n")]
-    question = None
-    while paragraphs:
-        paragraph = paragraphs.pop(0)
-        if paragraph.startswith("Вопрос"):
-            question = paragraph.split(":\n")[-1]
-        elif paragraph.startswith("Ответ"):
-            questions_with_answers[question] = paragraph.split(":\n")[-1]
-    return questions_with_answers
 
 
 def get_the_score(update: Update, context: CallbackContext, r):
@@ -107,11 +79,10 @@ def ask_next_question(update: Update, context: CallbackContext, r):
     if r.get(update.effective_chat.id):
         take_into_account(update, context, r, 0)
         r.delete(update.effective_chat.id)
-    questions_with_answers = collect_questions_with_answers()
-    next_question = random.choice(list(questions_with_answers.keys()))
-    r.set(next_question, questions_with_answers[next_question])
-    r.set(update.effective_chat.id, next_question)
-    message = next_question
+    question, answer = get_question_with_answer()
+    r.set(question, answer)
+    r.set(update.effective_chat.id, question)
+    message = question
     show_the_keyboard(update, context, message)
 
 
