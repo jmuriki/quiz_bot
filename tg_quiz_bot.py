@@ -1,11 +1,11 @@
 import os
+import time
 import redis
 import logging
 import telegram
 import telegram.ext
 
 from dotenv import load_dotenv
-from contextlib import suppress
 from telegram.ext import CallbackContext
 from telegram import Update, ReplyKeyboardMarkup
 from telegram_logs_handler import TelegramLogsHandler
@@ -75,11 +75,24 @@ def show_keyboard(update: Update, context: CallbackContext, message):
         [telegram.KeyboardButton("Мой счёт")],
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=message,
-        reply_markup=reply_markup,
-    )
+
+    timesleep = 0
+    while True:
+        try:
+            context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=message,
+                reply_markup=reply_markup,
+            )
+            return
+        except telegram.error.NetworkError as error:
+            logger.error(error)
+            time.sleep(1)
+        except Exception as error:
+            logger.exception(error)
+            time.sleep(timesleep)
+            timesleep += 1
+            continue
 
 
 def launch_next_step(update: Update, context: CallbackContext, r):
@@ -127,16 +140,12 @@ def main():
     redis_pub_endpoint = os.getenv("REDIS_PUBLIC_ENDPOINT")
     redis_port = int(os.getenv("REDIS_PORT"))
     redis_password = os.getenv("REDIS_PASSWORD")
-    try:
-        r = redis.Redis(
-            host=redis_pub_endpoint,
-            port=redis_port,
-            password=redis_password,
-            decode_responses=True,
-        )
-    except Exception as error:
-        logger.exception(error)
-
+    r = redis.Redis(
+        host=redis_pub_endpoint,
+        port=redis_port,
+        password=redis_password,
+        decode_responses=True,
+    )
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
     updater = telegram.ext.Updater(tg_token)
     dispatcher = updater.dispatcher

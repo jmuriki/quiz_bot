@@ -1,11 +1,11 @@
 import os
+import time
 import redis
 import logging
 import telegram
 import vk_api as vk
 
 from dotenv import load_dotenv
-from contextlib import suppress
 
 from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard
@@ -78,12 +78,21 @@ def show_keyboard(event, vk_api, message):
     keyboard.add_line()  # Переход на вторую строку
     keyboard.add_button('Мой счёт')
 
-    vk_api.messages.send(
-        user_id=event.user_id,
-        message=message,
-        random_id=get_random_id(),
-        keyboard=keyboard.get_keyboard(),
-    )
+    timesleep = 0
+    while True:
+        try:
+            vk_api.messages.send(
+                user_id=event.user_id,
+                message=message,
+                random_id=get_random_id(),
+                keyboard=keyboard.get_keyboard(),
+            )
+            return
+        except Exception as error:
+            logger.exception(error)
+            time.sleep(timesleep)
+            timesleep += 1
+            continue
 
 
 def launch_next_step(event, vk_api, r):
@@ -131,16 +140,12 @@ def main():
     redis_pub_endpoint = os.getenv("REDIS_PUBLIC_ENDPOINT")
     redis_port = int(os.getenv("REDIS_PORT"))
     redis_password = os.getenv("REDIS_PASSWORD")
-    try:
-        r = redis.Redis(
-            host=redis_pub_endpoint,
-            port=redis_port,
-            password=redis_password,
-            decode_responses=True,
-        )
-    except Exception as error:
-        logger.exception(error)
-
+    r = redis.Redis(
+        host=redis_pub_endpoint,
+        port=redis_port,
+        password=redis_password,
+        decode_responses=True,
+    )
     vk_api_token = os.getenv("VK_API_TOKEN")
     vk_session = vk.VkApi(token=vk_api_token)
     vk_api = vk_session.get_api()
