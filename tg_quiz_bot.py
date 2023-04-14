@@ -10,7 +10,7 @@ from telegram.ext import CallbackContext
 from telegram import Update, ReplyKeyboardMarkup
 from telegram_logs_handler import TelegramLogsHandler
 
-from result_saver import take_result_into_account
+from result_saver import save_result
 from questions_with_answers_miner import get_question_with_answer
 
 
@@ -31,14 +31,14 @@ def get_score(update: Update, context: CallbackContext, r):
     show_keyboard(update, context, message)
 
 
-def give_congratulations(update: Update, context: CallbackContext, r):
-    take_result_into_account(update.effective_chat.id, r, 1)
+def handle_victory(update: Update, context: CallbackContext, r):
+    save_result(update.effective_chat.id, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(update, context, message)
 
 
-def express_regret(update: Update, context: CallbackContext, r):
-    take_result_into_account(update.effective_chat.id, r, 0)
+def handle_mistake(update: Update, context: CallbackContext, r):
+    save_result(update.effective_chat.id, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(update, context, message)
 
@@ -49,7 +49,7 @@ def give_up(update: Update, context: CallbackContext, r):
     if question:
         answer = r.get(question)
         message = f"Правильный ответ: {answer}"
-        take_result_into_account(player_id, r, 0)
+        save_result(player_id, r, 0)
     else:
         message = "Попробуешь ещё раз?"
     show_keyboard(update, context, message)
@@ -57,7 +57,7 @@ def give_up(update: Update, context: CallbackContext, r):
 
 def ask_next_question(update: Update, context: CallbackContext, r):
     if r.get(update.effective_chat.id):
-        take_result_into_account(update.effective_chat.id, r, 0)
+        save_result(update.effective_chat.id, r, 0)
         r.delete(update.effective_chat.id)
     question, answer = get_question_with_answer()
     r.set(question, answer)
@@ -101,8 +101,8 @@ def launch_next_step(update: Update, context: CallbackContext, r):
         "Новый вопрос": ask_next_question,
         "Сдаюсь": give_up,
         "Мой счёт": get_score,
-        "Верный ответ": give_congratulations,
-        "Неверный ответ": express_regret,
+        "Верный ответ": handle_victory,
+        "Неверный ответ": handle_mistake,
     }
     asked_question = r.get(update.effective_chat.id)
     if asked_question:
