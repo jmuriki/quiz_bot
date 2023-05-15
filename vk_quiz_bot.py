@@ -20,7 +20,7 @@ from questions_with_answers_miner import get_question_with_answer
 logger = logging.getLogger(__name__)
 
 
-def get_score(event, vk_api, r):
+def get_score(event, vk_api, r, _):
     player_id = event.user_id
     guessed = f"Угадано {player_id}"
     unguessed = f"Не угадано {player_id}"
@@ -34,19 +34,19 @@ def get_score(event, vk_api, r):
     show_keyboard(event, vk_api, message)
 
 
-def handle_victory(event, vk_api, r):
+def handle_victory(event, vk_api, r, _):
     save_result(event.user_id, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(event, vk_api, message)
 
 
-def handle_mistake(event, vk_api, r):
+def handle_mistake(event, vk_api, r, _):
     save_result(event.user_id, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(event, vk_api, message)
 
 
-def give_up(event, vk_api, r):
+def give_up(event, vk_api, r, _):
     player_id = event.user_id
     question = r.get(player_id)
     if question:
@@ -58,11 +58,11 @@ def give_up(event, vk_api, r):
     show_keyboard(event, vk_api, message)
 
 
-def ask_next_question(event, vk_api, r):
+def ask_next_question(event, vk_api, r, path_to_quiz_questions):
     if r.get(event.user_id):
         save_result(event.user_id, r, 0)
         r.delete(event.user_id)
-    question, answer = get_question_with_answer()
+    question, answer = get_question_with_answer(path_to_quiz_questions)
     r.set(question, answer)
     r.set(event.user_id, question)
     message = question
@@ -95,7 +95,7 @@ def show_keyboard(event, vk_api, message):
             continue
 
 
-def launch_next_step(event, vk_api, r):
+def launch_next_step(event, vk_api, r, path_to_quiz_questions):
     last_input = event.text
     triggers = {
         "Новый вопрос": ask_next_question,
@@ -112,7 +112,7 @@ def launch_next_step(event, vk_api, r):
             last_input = "Неверный ответ"
     trigger = triggers.get(last_input)
     if trigger:
-        trigger(event, vk_api, r)
+        trigger(event, vk_api, r, path_to_quiz_questions)
     else:
         start(event, vk_api)
 
@@ -124,6 +124,11 @@ def start(event, vk_api):
 
 def main():
     load_dotenv()
+
+    path_to_quiz_questions = os.getenv(
+        "PATH_TO_QUIZ_QUESTIONS",
+        "./quiz-questions/"
+    )
 
     logging.basicConfig(
         level=logging.INFO,
@@ -154,7 +159,12 @@ def main():
 
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            launch_next_step(event, vk_api, r)
+            launch_next_step(
+                event,
+                vk_api,
+                r,
+                path_to_quiz_questions
+            )
 
 
 if __name__ == '__main__':

@@ -17,7 +17,7 @@ from questions_with_answers_miner import get_question_with_answer
 logger = logging.getLogger(__name__)
 
 
-def get_score(update: Update, context: CallbackContext, r):
+def get_score(update: Update, context: CallbackContext, r, _):
     player_id = update.effective_chat.id
     guessed = f"Угадано {player_id}"
     unguessed = f"Не угадано {player_id}"
@@ -31,19 +31,19 @@ def get_score(update: Update, context: CallbackContext, r):
     show_keyboard(update, context, message)
 
 
-def handle_victory(update: Update, context: CallbackContext, r):
+def handle_victory(update: Update, context: CallbackContext, r, _):
     save_result(update.effective_chat.id, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(update, context, message)
 
 
-def handle_mistake(update: Update, context: CallbackContext, r):
+def handle_mistake(update: Update, context: CallbackContext, r, _):
     save_result(update.effective_chat.id, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(update, context, message)
 
 
-def give_up(update: Update, context: CallbackContext, r):
+def give_up(update: Update, context: CallbackContext, r, _):
     player_id = update.effective_chat.id
     question = r.get(player_id)
     if question:
@@ -55,11 +55,17 @@ def give_up(update: Update, context: CallbackContext, r):
     show_keyboard(update, context, message)
 
 
-def ask_next_question(update: Update, context: CallbackContext, r):
+def ask_next_question(
+        update: Update,
+        context: CallbackContext,
+        r,
+        path_to_quiz_questions):
     if r.get(update.effective_chat.id):
         save_result(update.effective_chat.id, r, 0)
         r.delete(update.effective_chat.id)
-    question, answer = get_question_with_answer()
+    question, answer = get_question_with_answer(
+        path_to_quiz_questions
+    )
     r.set(question, answer)
     r.set(update.effective_chat.id, question)
     message = question
@@ -95,7 +101,11 @@ def show_keyboard(update: Update, context: CallbackContext, message):
             continue
 
 
-def launch_next_step(update: Update, context: CallbackContext, r):
+def launch_next_step(
+        update: Update,
+        context: CallbackContext,
+        r,
+        path_to_quiz_questions):
     last_input = update.message.text
     triggers = {
         "Новый вопрос": ask_next_question,
@@ -112,7 +122,7 @@ def launch_next_step(update: Update, context: CallbackContext, r):
             last_input = "Неверный ответ"
     trigger = triggers.get(last_input)
     if trigger:
-        trigger(update, context, r)
+        trigger(update, context, r, path_to_quiz_questions)
     else:
         start(update, context)
 
@@ -124,6 +134,11 @@ def start(update: Update, context: CallbackContext):
 
 def main():
     load_dotenv()
+
+    path_to_quiz_questions = os.getenv(
+        "PATH_TO_QUIZ_QUESTIONS",
+        "./quiz-questions/"
+    )
 
     logging.basicConfig(
         level=logging.INFO,
@@ -153,7 +168,12 @@ def main():
     dispatcher.add_handler(
         telegram.ext.MessageHandler(
             telegram.ext.Filters.text,
-            lambda update, context: launch_next_step(update, context, r)
+            lambda update, context: launch_next_step(
+                update,
+                context,
+                r,
+                path_to_quiz_questions
+            )
         )
     )
     updater.start_polling()
