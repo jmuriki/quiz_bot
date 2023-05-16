@@ -14,7 +14,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from telegram_logs_handler import TelegramLogsHandler
 
 from result_saver import save_result
-from questions_with_answers_miner import get_questions_with_answers
+from questions_with_answers_miner import get_question_with_answer
 
 
 logger = logging.getLogger(__name__)
@@ -58,12 +58,11 @@ def give_up(event, vk_api, r, _):
     show_keyboard(event, vk_api, message)
 
 
-def ask_next_question(event, vk_api, r, questions_with_answers):
+def ask_next_question(event, vk_api, r, path_to_quiz_questions):
     if r.get(event.user_id):
         save_result(event.user_id, r, 0)
         r.delete(event.user_id)
-    question = random.choice(list(questions_with_answers.keys()))
-    answer = questions_with_answers[question]
+    question, answer = get_question_with_answer(path_to_quiz_questions)
     r.set(question, answer)
     r.set(event.user_id, question)
     message = question
@@ -96,7 +95,7 @@ def show_keyboard(event, vk_api, message):
             continue
 
 
-def launch_next_step(event, vk_api, r, questions_with_answers):
+def launch_next_step(event, vk_api, r, path_to_quiz_questions):
     last_input = event.text
     triggers = {
         "Новый вопрос": ask_next_question,
@@ -113,7 +112,7 @@ def launch_next_step(event, vk_api, r, questions_with_answers):
             last_input = "Неверный ответ"
     trigger = triggers.get(last_input)
     if trigger:
-        trigger(event, vk_api, r, questions_with_answers)
+        trigger(event, vk_api, r, path_to_quiz_questions)
     else:
         start(event, vk_api)
 
@@ -129,10 +128,6 @@ def main():
     path_to_quiz_questions = os.getenv(
         "PATH_TO_QUIZ_QUESTIONS",
         "./quiz-questions/"
-    )
-
-    questions_with_answers = get_questions_with_answers (
-        path_to_quiz_questions
     )
 
     logging.basicConfig(
@@ -168,7 +163,7 @@ def main():
                 event,
                 vk_api,
                 r,
-                questions_with_answers
+                path_to_quiz_questions
             )
 
 

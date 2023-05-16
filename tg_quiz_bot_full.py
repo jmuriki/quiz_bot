@@ -11,7 +11,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram_logs_handler import TelegramLogsHandler
 
 from result_saver import save_result
-from questions_with_answers_miner import get_questions_with_answers
+from questions_with_answers_miner import get_question_with_answer
 
 
 logger = logging.getLogger(__name__)
@@ -59,12 +59,13 @@ def ask_next_question(
         update: Update,
         context: CallbackContext,
         r,
-        questions_with_answers):
+        path_to_quiz_questions):
     if r.get(update.effective_chat.id):
         save_result(update.effective_chat.id, r, 0)
         r.delete(update.effective_chat.id)
-    question = random.choice(list(questions_with_answers.keys()))
-    answer = questions_with_answers[question]
+    question, answer = get_question_with_answer(
+        path_to_quiz_questions
+    )
     r.set(question, answer)
     r.set(update.effective_chat.id, question)
     message = question
@@ -104,7 +105,7 @@ def launch_next_step(
         update: Update,
         context: CallbackContext,
         r,
-        questions_with_answers):
+        path_to_quiz_questions):
     last_input = update.message.text
     triggers = {
         "Новый вопрос": ask_next_question,
@@ -121,7 +122,7 @@ def launch_next_step(
             last_input = "Неверный ответ"
     trigger = triggers.get(last_input)
     if trigger:
-        trigger(update, context, r, questions_with_answers)
+        trigger(update, context, r, path_to_quiz_questions)
     else:
         start(update, context)
 
@@ -137,10 +138,6 @@ def main():
     path_to_quiz_questions = os.getenv(
         "PATH_TO_QUIZ_QUESTIONS",
         "./quiz-questions/"
-    )
-
-    questions_with_answers = get_questions_with_answers (
-        path_to_quiz_questions
     )
 
     logging.basicConfig(
@@ -175,7 +172,7 @@ def main():
                 update,
                 context,
                 r,
-                questions_with_answers
+                path_to_quiz_questions
             )
         )
     )
