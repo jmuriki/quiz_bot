@@ -1,21 +1,15 @@
 import os
-import time
 import redis
 import random
-import logging
 import telegram
 import telegram.ext
 
 from dotenv import load_dotenv
 from telegram.ext import CallbackContext
 from telegram import Update, ReplyKeyboardMarkup
-from telegram_logs_handler import TelegramLogsHandler
 
 from result_saver import save_result
 from questions_with_answers_miner import get_questions_with_answers
-
-
-logger = logging.getLogger(__name__)
 
 
 def get_score(update: Update, context: CallbackContext, r, _):
@@ -82,23 +76,12 @@ def show_keyboard(update: Update, context: CallbackContext, message):
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 
-    timesleep = 0
-    while True:
-        try:
-            context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=message,
-                reply_markup=reply_markup,
-            )
-            return
-        except telegram.error.NetworkError as error:
-            logger.error(error)
-            time.sleep(1)
-        except Exception as error:
-            logger.exception(error)
-            time.sleep(timesleep)
-            timesleep += 1
-            continue
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=message,
+        reply_markup=reply_markup,
+    )
+    return
 
 
 def launch_next_step(
@@ -140,21 +123,9 @@ def main():
         "./quiz-questions/"
     )
 
-    questions_with_answers = get_questions_with_answers (
+    questions_with_answers = get_questions_with_answers(
         path_to_quiz_questions
     )
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(process)d - %(levelname)s - %(message)s",
-    )
-
-    telegram_notify_token = os.getenv("TELEGRAM_NOTIFY_TOKEN")
-    chat_id = os.getenv("TELEGRAM_NOTIFY_CHAT_ID")
-    if telegram_notify_token and chat_id:
-        notify_bot = telegram.Bot(token=telegram_notify_token)
-        logger.setLevel(logging.INFO)
-        logger.addHandler(TelegramLogsHandler(notify_bot, chat_id))
 
     redis_pub_endpoint = os.getenv("REDIS_PUBLIC_ENDPOINT")
     redis_port = int(os.getenv("REDIS_PORT"))

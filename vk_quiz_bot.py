@@ -1,9 +1,6 @@
 import os
-import time
 import redis
 import random
-import logging
-import telegram
 import vk_api as vk
 
 from dotenv import load_dotenv
@@ -12,13 +9,8 @@ from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard
 from vk_api.longpoll import VkLongPoll, VkEventType
 
-from telegram_logs_handler import TelegramLogsHandler
-
 from result_saver import save_result
 from questions_with_answers_miner import get_questions_with_answers
-
-
-logger = logging.getLogger(__name__)
 
 
 def get_score(event, vk_api, r, _):
@@ -80,21 +72,13 @@ def show_keyboard(event, vk_api, message):
     keyboard.add_line()  # Переход на вторую строку
     keyboard.add_button('Мой счёт')
 
-    timesleep = 0
-    while True:
-        try:
-            vk_api.messages.send(
-                user_id=event.user_id,
-                message=message,
-                random_id=get_random_id(),
-                keyboard=keyboard.get_keyboard(),
-            )
-            return
-        except Exception as error:
-            logger.exception(error)
-            time.sleep(timesleep)
-            timesleep += 1
-            continue
+    vk_api.messages.send(
+        user_id=event.user_id,
+        message=message,
+        random_id=get_random_id(),
+        keyboard=keyboard.get_keyboard(),
+    )
+    return
 
 
 def launch_next_step(event, vk_api, r, questions_with_answers):
@@ -132,21 +116,9 @@ def main():
         "./quiz-questions/"
     )
 
-    questions_with_answers = get_questions_with_answers (
+    questions_with_answers = get_questions_with_answers(
         path_to_quiz_questions
     )
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(process)d %(levelname)s %(message)s",
-    )
-
-    telegram_notify_token = os.getenv("TELEGRAM_NOTIFY_TOKEN")
-    chat_id = os.getenv("TELEGRAM_NOTIFY_CHAT_ID")
-    if telegram_notify_token and chat_id:
-        notify_bot = telegram.Bot(token=telegram_notify_token)
-        logger.setLevel(logging.INFO)
-        logger.addHandler(TelegramLogsHandler(notify_bot, chat_id))
 
     redis_pub_endpoint = os.getenv("REDIS_PUBLIC_ENDPOINT")
     redis_port = int(os.getenv("REDIS_PORT"))
