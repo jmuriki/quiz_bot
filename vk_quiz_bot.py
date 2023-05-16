@@ -9,7 +9,7 @@ from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard
 from vk_api.longpoll import VkLongPoll, VkEventType
 
-from result_saver import save_result
+from result_handler import handle_result
 from questions_with_answers_miner import get_questions_with_answers
 
 
@@ -28,13 +28,13 @@ def get_score(event, vk_api, r, _):
 
 
 def handle_victory(event, vk_api, r, _):
-    save_result(event.user_id, r, 1)
+    handle_result(event.user_id, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(event, vk_api, message)
 
 
 def handle_mistake(event, vk_api, r, _):
-    save_result(event.user_id, r, 0)
+    handle_result(event.user_id, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(event, vk_api, message)
 
@@ -45,7 +45,7 @@ def give_up(event, vk_api, r, _):
     if question:
         answer = r.get(question)
         message = f"Правильный ответ: {answer}"
-        save_result(player_id, r, 0)
+        handle_result(player_id, r, 0)
     else:
         message = "Попробуешь ещё раз?"
     show_keyboard(event, vk_api, message)
@@ -53,7 +53,7 @@ def give_up(event, vk_api, r, _):
 
 def ask_next_question(event, vk_api, r, questions_with_answers):
     if r.get(event.user_id):
-        save_result(event.user_id, r, 0)
+        handle_result(event.user_id, r, 0)
         r.delete(event.user_id)
     question = random.choice(list(questions_with_answers.keys()))
     answer = questions_with_answers[question]

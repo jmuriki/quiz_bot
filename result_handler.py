@@ -1,7 +1,7 @@
 import redis
 
 
-def save_result(player_id, r, result):
+def handle_result(player_id, r, result):
     question = r.get(player_id)
     guessed = f"Угадано {player_id}"
     unguessed = f"Не угадано {player_id}"

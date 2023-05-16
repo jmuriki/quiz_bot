@@ -10,7 +10,7 @@ from telegram.ext import CallbackContext
 from telegram import Update, ReplyKeyboardMarkup
 from telegram_logs_handler import TelegramLogsHandler
 
-from result_saver import save_result
+from result_handler import handle_result
 from questions_with_answers_miner import get_question_with_answer
 
 
@@ -32,13 +32,13 @@ def get_score(update: Update, context: CallbackContext, r, _):
 
 
 def handle_victory(update: Update, context: CallbackContext, r, _):
-    save_result(update.effective_chat.id, r, 1)
+    handle_result(update.effective_chat.id, r, 1)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(update, context, message)
 
 
 def handle_mistake(update: Update, context: CallbackContext, r, _):
-    save_result(update.effective_chat.id, r, 0)
+    handle_result(update.effective_chat.id, r, 0)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(update, context, message)
 
@@ -49,7 +49,7 @@ def give_up(update: Update, context: CallbackContext, r, _):
     if question:
         answer = r.get(question)
         message = f"Правильный ответ: {answer}"
-        save_result(player_id, r, 0)
+        handle_result(player_id, r, 0)
     else:
         message = "Попробуешь ещё раз?"
     show_keyboard(update, context, message)
@@ -61,7 +61,7 @@ def ask_next_question(
         r,
         path_to_quiz_questions):
     if r.get(update.effective_chat.id):
-        save_result(update.effective_chat.id, r, 0)
+        handle_result(update.effective_chat.id, r, 0)
         r.delete(update.effective_chat.id)
     question, answer = get_question_with_answer(
         path_to_quiz_questions
