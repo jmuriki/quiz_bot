@@ -2,7 +2,6 @@ import redis
 
 
 def handle_result(player_id, r, result):
-    question = r.get(player_id)
     guessed = f"Угадано {player_id}"
     unguessed = f"Не угадано {player_id}"
     guessed_score = r.get(guessed)
@@ -17,5 +16,6 @@ def handle_result(player_id, r, result):
             r.set(unguessed, str(int(unguessed_score) + 1))
         else:
             r.set(unguessed, "1")
-    r.delete(question)
+    last_question = r.get(player_id)
+    r.delete(last_question)
     r.delete(player_id)
