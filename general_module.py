@@ -63,4 +63,4 @@ def set_db_result(result_status, player_id, r):
     score_key = f"{result_status} {player_id}"
     score = r.get(score_key)
     new_score = int(score) + 1 if score else 1
-    r.set(db_key, str(new_score))
+    r.set(score_key, str(new_score))
