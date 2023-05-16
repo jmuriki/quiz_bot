@@ -10,17 +10,20 @@ def is_system_file(filename):
     return any(extention in filename for extention in system_files_extentions)
 
 
-def get_question_with_answer(path_to_quiz_questions):
-    quiz_questions_path = Path(path_to_quiz_questions).resolve()
+def get_filepaths(folder):
+    folderpath = Path(folder).resolve()
     filepaths = []
-    for root, _, filenames in os.walk(quiz_questions_path):
+    for root, _, filenames in os.walk(folderpath):
         for filename in filenames:
             if not is_system_file(filename):
                 filepath = os.path.join(root, filename)
                 filepaths.append(filepath)
+    return filepaths
+
+
+def parse_questions_with_answers(filepath):
     questions_with_answers = {}
-    random_filepath = random.choice(filepaths)
-    with open(random_filepath, encoding="KOI8-R") as file:
+    with open(filepath, encoding="KOI8-R") as file:
         text = file.read()
     paragraphs = [text_part.strip() for text_part in text.split("\n\n")]
     question = None
@@ -30,32 +33,24 @@ def get_question_with_answer(path_to_quiz_questions):
             question = paragraph.split(":\n")[-1]
         elif paragraph.startswith("Ответ"):
             questions_with_answers[question] = paragraph.split(":\n")[-1]
-    next_question = random.choice(list(questions_with_answers.keys()))
-    return next_question, questions_with_answers[next_question]
+    return questions_with_answers
+
+
+def get_question_with_answer(path_to_quiz_questions):
+    filepaths = get_filepaths(path_to_quiz_questions)
+    random_filepath = random.choice(filepaths)
+    questions_with_answers = parse_questions_with_answers(random_filepath)
+    random_question = random.choice(list(questions_with_answers.keys()))
+    return random_question, questions_with_answers[random_question]
 
 
 def get_questions_with_answers(path_to_quiz_questions):
-    quiz_questions_path = Path(path_to_quiz_questions).resolve()
-    filepaths = []
-    for root, _, filenames in os.walk(quiz_questions_path):
-        for filename in filenames:
-            if not is_system_file(filename):
-                filepath = os.path.join(root, filename)
-                filepaths.append(filepath)
-    questions_with_answers = {}
+    filepaths = get_filepaths(path_to_quiz_questions)
     num_paths = 5
     random_filepaths = random.sample(filepaths, num_paths)
+    questions_with_answers = {}
     for filepath in random_filepaths:
-        with open(filepath, encoding="KOI8-R") as file:
-            text = file.read()
-        paragraphs = [text_part.strip() for text_part in text.split("\n\n")]
-        question = None
-        while paragraphs:
-            paragraph = paragraphs.pop(0)
-            if paragraph.startswith("Вопрос"):
-                question = paragraph.split(":\n")[-1]
-            elif paragraph.startswith("Ответ"):
-                questions_with_answers[question] = paragraph.split(":\n")[-1]
+        questions_with_answers.update(parse_questions_with_answers(filepath))
     return questions_with_answers
 
 
