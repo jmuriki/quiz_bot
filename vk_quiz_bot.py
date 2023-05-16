@@ -1,6 +1,7 @@
 import os
 import time
 import redis
+import random
 import logging
 import telegram
 import vk_api as vk
