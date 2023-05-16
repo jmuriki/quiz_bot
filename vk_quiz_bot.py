@@ -9,16 +9,14 @@ from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard
 from vk_api.longpoll import VkLongPoll, VkEventType
 
-from result_handler import handle_result
-from questions_with_answers_miner import get_questions_with_answers
+from general_module import set_db_result
+from general_module import get_questions_with_answers
 
 
 def get_score(event, vk_api, r, _):
     player_id = event.user_id
-    guessed = f"Угадано {player_id}"
-    unguessed = f"Не угадано {player_id}"
-    guessed_score = r.get(guessed)
-    unguessed_score = r.get(unguessed)
+    guessed_score = r.get(f"Угадано {player_id}")
+    unguessed_score = r.get(f"Не угадано {player_id}")
     if not guessed_score:
         guessed_score = 0
     if not unguessed_score:
@@ -28,37 +26,41 @@ def get_score(event, vk_api, r, _):
 
 
 def handle_victory(event, vk_api, r, _):
-    handle_result(event.user_id, r, 1)
+    player_id = event.user_id
+    set_db_result("Угадано", player_id, r)
+    r.delete(player_id)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(event, vk_api, message)
 
 
 def handle_mistake(event, vk_api, r, _):
-    handle_result(event.user_id, r, 0)
+    player_id = event.user_id
+    set_db_result("Не угадано", player_id, r)
+    r.delete(player_id)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(event, vk_api, message)
 
 
 def give_up(event, vk_api, r, _):
     player_id = event.user_id
-    question = r.get(player_id)
-    if question:
-        answer = r.get(question)
+    answer = r.get(player_id)
+    if answer:
         message = f"Правильный ответ: {answer}"
-        handle_result(player_id, r, 0)
+        set_db_result("Не угадано", player_id, r)
+        r.delete(player_id)
     else:
         message = "Попробуешь ещё раз?"
     show_keyboard(event, vk_api, message)
 
 
 def ask_next_question(event, vk_api, r, questions_with_answers):
-    if r.get(event.user_id):
-        handle_result(event.user_id, r, 0)
-        r.delete(event.user_id)
+    player_id = event.user_id
+    if r.get(player_id):
+        set_db_result("Не угадано", player_id, r)
+        r.delete(player_id)
     question = random.choice(list(questions_with_answers.keys()))
     answer = questions_with_answers[question]
-    r.set(question, answer)
-    r.set(event.user_id, question)
+    r.set(player_id, answer)
     message = question
     show_keyboard(event, vk_api, message)
 
@@ -90,9 +92,9 @@ def launch_next_step(event, vk_api, r, questions_with_answers):
         "Верный ответ": handle_victory,
         "Неверный ответ": handle_mistake,
     }
-    asked_question = r.get(event.user_id)
-    if asked_question:
-        if last_input in r.get(asked_question):
+    answer = r.get(event.user_id)
+    if answer:
+        if last_input in answer:
             last_input = "Верный ответ"
         elif last_input not in triggers.keys():
             last_input = "Неверный ответ"

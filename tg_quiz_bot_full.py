@@ -10,8 +10,8 @@ from telegram.ext import CallbackContext
 from telegram import Update, ReplyKeyboardMarkup
 from telegram_logs_handler import TelegramLogsHandler
 
-from result_handler import handle_result
-from questions_with_answers_miner import get_question_with_answer
+from general_module import set_db_result
+from general_module import get_question_with_answer
 
 
 logger = logging.getLogger(__name__)
@@ -19,10 +19,8 @@ logger = logging.getLogger(__name__)
 
 def get_score(update: Update, context: CallbackContext, r, _):
     player_id = update.effective_chat.id
-    guessed = f"Угадано {player_id}"
-    unguessed = f"Не угадано {player_id}"
-    guessed_score = r.get(guessed)
-    unguessed_score = r.get(unguessed)
+    guessed_score = r.get(f"Угадано {player_id}")
+    unguessed_score = r.get(f"Не угадано {player_id}")
     if not guessed_score:
         guessed_score = 0
     if not unguessed_score:
@@ -32,24 +30,28 @@ def get_score(update: Update, context: CallbackContext, r, _):
 
 
 def handle_victory(update: Update, context: CallbackContext, r, _):
-    handle_result(update.effective_chat.id, r, 1)
+    player_id = update.effective_chat.id
+    set_db_result("Угадано", player_id, r)
+    r.delete(player_id)
     message = "Правильно! Поздравляю! Для продолжения нажми «Новый вопрос»"
     show_keyboard(update, context, message)
 
 
 def handle_mistake(update: Update, context: CallbackContext, r, _):
-    handle_result(update.effective_chat.id, r, 0)
+    player_id = update.effective_chat.id
+    set_db_result("Не угадано", player_id, r)
+    r.delete(player_id)
     message = "Неправильно… Попробуешь ещё раз?"
     show_keyboard(update, context, message)
 
 
 def give_up(update: Update, context: CallbackContext, r, _):
     player_id = update.effective_chat.id
-    question = r.get(player_id)
-    if question:
-        answer = r.get(question)
+    answer = r.get(player_id)
+    if answer:
         message = f"Правильный ответ: {answer}"
-        handle_result(player_id, r, 0)
+        set_db_result("Не угадано", player_id, r)
+        r.delete(player_id)
     else:
         message = "Попробуешь ещё раз?"
     show_keyboard(update, context, message)
@@ -60,14 +62,14 @@ def ask_next_question(
         context: CallbackContext,
         r,
         path_to_quiz_questions):
-    if r.get(update.effective_chat.id):
-        handle_result(update.effective_chat.id, r, 0)
-        r.delete(update.effective_chat.id)
+    player_id = update.effective_chat.id
+    if r.get(player_id):
+        set_db_result("Не угадано", player_id, r)
+        r.delete(player_id)
     question, answer = get_question_with_answer(
         path_to_quiz_questions
     )
-    r.set(question, answer)
-    r.set(update.effective_chat.id, question)
+    r.set(player_id, answer)
     message = question
     show_keyboard(update, context, message)
 
@@ -114,9 +116,9 @@ def launch_next_step(
         "Верный ответ": handle_victory,
         "Неверный ответ": handle_mistake,
     }
-    asked_question = r.get(update.effective_chat.id)
-    if asked_question:
-        if last_input in r.get(asked_question):
+    answer = r.get(update.effective_chat.id)
+    if answer:
+        if last_input in answer:
             last_input = "Верный ответ"
         elif last_input not in triggers.keys():
             last_input = "Неверный ответ"

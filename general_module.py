@@ -1,4 +1,5 @@
 import os
+import redis
 import random
 
 from pathlib import Path
@@ -56,3 +57,10 @@ def get_questions_with_answers(path_to_quiz_questions):
             elif paragraph.startswith("Ответ"):
                 questions_with_answers[question] = paragraph.split(":\n")[-1]
     return questions_with_answers
+
+
+def set_db_result(result_status, player_id, r):
+    score_key = f"{result_status} {player_id}"
+    score = r.get(score_key)
+    new_score = int(score) + 1 if score else 1
+    r.set(db_key, str(new_score))
